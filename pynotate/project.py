@@ -1,6 +1,6 @@
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 from pynotate.client import Client
 from pynotate.utils.image import encode_image_as_base64png, save_image
@@ -15,9 +15,11 @@ class Project:
         is_segmentation: bool = False,
         is_classification: bool = False,
         is_instance_segmentation: bool = False,
-        segmentation_classes: Optional = None,
+        has_text_description: bool = False,
+        segmentation_classes: Optional[List[str]] = None,
         classification_classes: Optional = None,
         classification_multilabel: Optional = None,
+        text_names: Optional[List[str]] = None
     ):
         self.project_name = project_name
         self.input_dir = Path(input_dir)
@@ -35,10 +37,12 @@ class Project:
             or classification_multilabel is not None
         )
 
+        self.has_text_description = has_text_description or (text_names is not None)
+
         self.is_instance_segmentation = is_instance_segmentation
         self.segmentation_classes = segmentation_classes
         self.classification_classes = classification_classes
-
+        self.text_names = text_names
         self.config = {
             "project_name": self.project_name,
             "input_dir": str(self.input_dir),
@@ -46,9 +50,11 @@ class Project:
             "is_segmentation": self.is_segmentation,
             "is_classification": self.is_classification,
             "is_instance_segmentation": self.is_instance_segmentation,
+            "has_text_description": self.has_text_description,
             "segmentation_classes": self.segmentation_classes,
             "classification_classes": self.classification_classes,
             "classification_multilabel": classification_multilabel,
+            "text_names": text_names	
         }
 
         self.list_files = list(Path(input_dir).rglob("*.*"))
@@ -66,15 +72,16 @@ class Project:
 
     def load_image(
         self,
+        image=None,
         image_path=None,
         segmentation_masks=None,
-        image=None,
         filename=None,
         normalize=False,
         copy_to_input_dir=True,
         segmentation_classes=None,
         multiclass_choices=None,
         multilabel_choices=None,
+        texts=None,
     ):
         assert (
             (filename is not None) or (image_path is not None) or (image is not None)
@@ -115,6 +122,7 @@ class Project:
                     "segmentation_classes": segmentation_classes,
                     "classification_classes": multiclass_choices,
                     "classification_multilabel": multilabel_choices,
+                    "texts": texts,
                 },
             )
             if not response.success:
