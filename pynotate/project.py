@@ -2,8 +2,11 @@ import shutil
 from pathlib import Path
 from typing import Optional, List
 
+import PIL.Image
+
 from pynotate.client import Client
 from pynotate.utils.image import encode_image_as_base64png, save_image
+import PIL
 
 
 class Project:
@@ -19,7 +22,7 @@ class Project:
         segmentation_classes: Optional[List[str]] = None,
         classification_classes: Optional = None,
         classification_multilabel: Optional = None,
-        text_names: Optional[List[str]] = None
+        text_names: Optional[List[str]] = None,
     ):
         self.project_name = project_name
         self.input_dir = Path(input_dir)
@@ -54,7 +57,7 @@ class Project:
             "segmentation_classes": self.segmentation_classes,
             "classification_classes": self.classification_classes,
             "classification_multilabel": classification_multilabel,
-            "text_names": text_names	
+            "text_names": text_names,
         }
 
         self.list_files = list(Path(input_dir).rglob("*.*"))
@@ -113,6 +116,12 @@ class Project:
         segmentation_data = [
             encode_image_as_base64png(mask) for mask in segmentation_masks
         ]
+        if segmentation_data:
+            h, w = segmentation_masks[0].shape
+        else:
+            image = PIL.Image.open(image_path)
+            w, h = image.size
+
         with self.client.connection() as client:
             response = client.send_command(
                 "LoadImage",
@@ -123,6 +132,8 @@ class Project:
                     "classification_classes": multiclass_choices,
                     "classification_multilabel": multilabel_choices,
                     "texts": texts,
+                    "width": w,
+                    "height": h,
                 },
             )
             if not response.success:
